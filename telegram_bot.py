@@ -33,6 +33,7 @@ class CrawlingBot:
     def __init__(self):
         options = webdriver.ChromeOptions()
         options.add_argument('headless')
+        options.add_argument('--log-level=3')
 
         self.loc = ""
         self.time_prev = ""
