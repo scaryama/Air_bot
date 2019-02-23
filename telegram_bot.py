@@ -11,20 +11,20 @@ class CrawlingBot:
 
         self.count = 0
         self.time_prev = ""
+        self.domain = "https://earth.nullschool.net/#current/particulates/surface/level"
+        self.loc = "126.922,37.383"
         self.ar_url = [self.get_url("pm1"), self.get_url("pm2.5"), self.get_url("pm10"), self.get_url("so2smass")]
-        self.driver = webdriver.Chrome('chromedriver.exe', chrome_options=options)
 
+        self.driver = webdriver.Chrome('chromedriver.exe', chrome_options=options)
         self.driver.get(self.ar_url[2])
 
         self.remove_element("/html/head")
         self.remove_element("/html/body/script")
         self.removes(["display", "tara-stats", "sponsor", "notice", "settings-wrap", "calendar-wrapper", "earth", "status"])
+        print("Ready crawling")
 
     def get_url(self, overlay):
-        domain = "https://earth.nullschool.net/"
-        orthographic = "126.92,37.38,3000"
-        loc = "126.922,37.383"
-        return domain + "#current/particulates/surface/level/overlay=" + overlay + "/orthographic=" + orthographic + "/loc=" + loc
+        return self.domain + "/overlay=" + overlay + "/loc=" + self.loc
 
     def remove_element(self, xpath):
         self.driver.execute_script("""
@@ -46,6 +46,7 @@ class CrawlingBot:
         return value
 
     def run(self):
+        self.loc = "126.922,37.383"
         ar = []
 
         for url in self.ar_url:
@@ -54,85 +55,71 @@ class CrawlingBot:
 
         self.str = ""
         self.str += "[미세먼지 정보]\n"
+        self.str += "이산화황 " + ar[3] + "\n"
         self.str += "극초미세 " + ar[0] + "\n"
         self.str += "초미세    " + ar[1] + "\n"
         self.str += "미세먼지 " + ar[2] + "\n"
-        self.str += "이산화황 " + ar[3] + "\n"
 
         return self.str
-
 
 # =========================
 # telegram
 # =========================
-
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-
-class TelegramBot:
-    def __init__(self, token):
-        self.core = telegram.Bot(token)
-        self.updater = Updater(token)
-
-    def start(self):
-        self.updater.start_polling()
-        self.updater.idle()
-
-    def stop(self):
-        self.updater.start_polling()
-        self.updater.dispatcher.stop()
-        self.updater.job_queue.stop()
-        self.updater.stop()
-
-    def send_message(self, id, text):
-        return self.core.sendMessage(chat_id = id, text=text)
-
-    def delete_message(self, chat_id, message_id):
-        self.core.deleteMessage(chat_id, message_id)
-
-    def add_handler(self, cmd, func):
-        self.updater.dispatcher.add_handler(CommandHandler(cmd, func))
-
-    def message_handler(self, func):
-        self.updater.dispatcher.add_handler(MessageHandler(Filters.text, func))
-
-#======================
+import config
 
 
-MSG_HOW_TO = '사용방법\n/air'
+MSG_HOW_TO = '명령어 /air'
 ar_id = {688899662, 421152487}
 def proc_start(bot, update):
     ar_id.add(update.message.chat.id)
     print(ar_id)
-    bot.send_message(update.message.chat.id, MSG_HOW_TO)
+    #bot.send_message(update.message.chat.id, MSG_HOW_TO)
+    location_keyboard = telegram.KeyboardButton(text="시작", request_location=True)
+    custom_keyboard = [[location_keyboard]]
+    reply_markup = telegram.ReplyKeyboardMarkup(custom_keyboard, resize_keyboard=True)
+    bot.send_message(chat_id=update.message.chat.id, text = "[미세먼지 정보]\n위치정보를 봇에게 전송합니다", reply_markup = reply_markup)
 
 def proc_message(bot, update):
     ar_id.add(update.message.chat.id)
     print(ar_id)
     update.message.reply_text(MSG_HOW_TO)
 
+def proc_location(bot, update):
+    ar_id.add(update.message.chat.id)
+    crawling.loc = "{},{}".format(update.message.location.longitude, update.message.location.latitude)
+    location_keyboard = telegram.KeyboardButton(text="/air")
+    custom_keyboard = [[location_keyboard]]
+    reply_markup = telegram.ReplyKeyboardMarkup(custom_keyboard, resize_keyboard=True)
+    bot.send_message(chat_id=update.message.chat.id, text="OK", reply_markup=reply_markup)
+    str = crawling.run()
+    bot.send_message(chat_id=update.message.chat.id, text=str)
+    bot.send_message(chat_id=update.message.chat.id, text="다음에 또 불러주세요\n"+MSG_HOW_TO)
+
 def proc_air(bot, update):
     ar_id.add(update.message.chat.id)
     print(ar_id)
-    #result = bot.send_message(update.message.chat.id, '수집중...')
     str = crawling.run()
     bot.send_message(update.message.chat.id, str)
-    #bot.delete_message(update.message.chat.id, result.message_id)
-
 
 def proc_call(bot, update):
-    #result = bot.send_message(update.message.chat.id, '수집중...')
     str = crawling.run()
     for id in ar_id:
         bot.send_message(id, str)
-    #bot.delete_message(update.message.chat.id, result.message_id)
-
-import config
 
 crawling = CrawlingBot()
-bot = TelegramBot(config.BOT_ACCESS_TOKEN)
-bot.add_handler('start', proc_start)
-bot.add_handler('air', proc_air)
-bot.add_handler('call', proc_call)
-bot.message_handler(proc_message)
-bot.start()
+
+#init
+updater = Updater(config.BOT_ACCESS_TOKEN)
+
+#add event
+updater.dispatcher.add_handler(CommandHandler('start', proc_start))
+updater.dispatcher.add_handler(CommandHandler('air', proc_air))
+updater.dispatcher.add_handler(CommandHandler('call', proc_call))
+updater.dispatcher.add_handler(MessageHandler(Filters.text, proc_message))
+updater.dispatcher.add_handler(MessageHandler(Filters.location, proc_location))
+
+#start
+updater.start_polling()
+updater.idle()
