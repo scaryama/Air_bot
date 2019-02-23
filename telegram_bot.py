@@ -155,11 +155,10 @@ def check_init(bot, update):
         return False
 
 
-create_directory("data")
-
-crawling = CrawlingBot()
 
 #init
+create_directory("data")
+crawling = CrawlingBot()
 updater = Updater(config.BOT_ACCESS_TOKEN)
 
 #add event
