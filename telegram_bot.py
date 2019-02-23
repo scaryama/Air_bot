@@ -11,7 +11,7 @@ class CrawlingBot:
 
         self.count = 0
         self.time_prev = ""
-        self.ar_url = [self.get_url("pm1"), self.get_url("pm2.5"), self.get_url("pm10")]
+        self.ar_url = [self.get_url("pm1"), self.get_url("pm2.5"), self.get_url("pm10"), self.get_url("so2smass")]
         self.driver = webdriver.Chrome('chromedriver.exe', chrome_options=options)
 
         self.driver.get(self.ar_url[2])
@@ -54,9 +54,10 @@ class CrawlingBot:
 
         self.str = ""
         self.str += "[미세먼지 정보]\n"
-        self.str += "PM1     " + ar[0] + "\n"
-        self.str += "PM2.5  " + ar[1] + "\n"
-        self.str += "PM10   " + ar[2] + "\n"
+        self.str += "극초미세 " + ar[0] + "\n"
+        self.str += "초미세    " + ar[1] + "\n"
+        self.str += "미세먼지 " + ar[2] + "\n"
+        self.str += "이산화황 " + ar[3] + "\n"
 
         return self.str
 
@@ -129,7 +130,7 @@ def proc_call(bot, update):
 import config
 
 crawling = CrawlingBot()
-bot = TelegramBot(config.Config.BOT_ACCESS_TOKEN)
+bot = TelegramBot(config.BOT_ACCESS_TOKEN)
 bot.add_handler('start', proc_start)
 bot.add_handler('air', proc_air)
 bot.add_handler('call', proc_call)
