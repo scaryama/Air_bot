@@ -1,4 +1,26 @@
 # =========================
+# file
+# =========================
+import os
+def set_data(id, data):
+    path = "data/" + str(id)
+    file = open(path, 'w')
+    file.write(data)
+    file.close()
+
+def get_data(id):
+    path = "data/" + str(id)
+    file = open(path, 'r')
+    _str = file.read()
+    file.close()
+    return _str
+
+def is_data(id):
+    path = "data/" + str(id)
+    return os.path.exists(path)
+
+
+# =========================
 # crawling
 # =========================
 from selenium import webdriver
@@ -9,10 +31,9 @@ class CrawlingBot:
         options = webdriver.ChromeOptions()
         options.add_argument('headless')
 
-        self.count = 0
+        self.loc = ""
         self.time_prev = ""
         self.domain = "https://earth.nullschool.net/#current/particulates/surface/level"
-        self.loc = ""
 
         self.driver = webdriver.Chrome('chromedriver.exe', chrome_options=options)
         self.driver.get(self.domain)
@@ -52,14 +73,13 @@ class CrawlingBot:
             self.driver.get(url)
             ar.append(self.get_value())
 
-        self.str = ""
-        self.str += "[미세먼지 정보]\n"
-        self.str += "이산화황 " + ar[3] + "\n"
-        self.str += "극초미세 " + ar[0] + "\n"
-        self.str += "초미세    " + ar[1] + "\n"
-        self.str += "미세먼지 " + ar[2] + "\n"
+        self._str = "[미세먼지 정보]\n"
+        self._str += "이산화황 " + ar[3] + "\n"
+        self._str += "극초미세 " + ar[0] + "\n"
+        self._str += "초미세    " + ar[1] + "\n"
+        self._str += "미세먼지 " + ar[2] + "\n"
 
-        return self.str
+        return self._str
 
 # =========================
 # telegram
@@ -82,32 +102,43 @@ def proc_start(bot, update):
 
 def proc_location(bot, update):
     id = update.message.chat.id
-    dic_loc[id] = "{},{}".format(update.message.location.longitude, update.message.location.latitude)
-    location_keyboard = telegram.KeyboardButton(text="/air")
-    custom_keyboard = [[location_keyboard]]
-    reply_markup = telegram.ReplyKeyboardMarkup(custom_keyboard, resize_keyboard=True)
-    str = crawling.run(dic_loc[id])
-    bot.send_message(chat_id=id, text=str, reply_markup=reply_markup)
+    isNewUser = False
+    if (id in dic_loc) == False:
+        isNewUser = True
+
+    dic_loc[id] = "{0:.3f},{1:.3f}".format(update.message.location.longitude, update.message.location.latitude)
+    _str = crawling.run(dic_loc[id])
+    bot.send_message(chat_id=id, text=_str, reply_markup=get_markup())
     bot.send_message(chat_id=id, text="다음에 또 불러주세요\n"+MSG_HOW_TO)
+
+    if isNewUser == True:
+        print(dic_loc)
 
 def proc_air(bot, update):
     if check_init(bot, update):
         return
     id = update.message.chat.id
-    str = crawling.run(dic_loc[id])
-    bot.send_message(id, str)
+    _str = crawling.run(dic_loc[id])
+    bot.send_message(chat_id=id, text=_str, reply_markup=get_markup())
 
 def proc_call(bot, update):
     if check_init(bot, update):
         return
-    str = crawling.run(dic_loc[id])
+    id = update.message.chat.id
+    _str = crawling.run(dic_loc[id])
     for id in ar_admin:
-        bot.send_message(id, str)
+        bot.send_message(chat_id=id, text=_str, reply_markup=get_markup())
 
 def proc_message(bot, update):
     if check_init(bot, update):
         return
     update.message.reply_text(MSG_HOW_TO)
+
+def get_markup():
+    location_keyboard = telegram.KeyboardButton(text="/air")
+    custom_keyboard = [[location_keyboard]]
+    reply_markup = telegram.ReplyKeyboardMarkup(custom_keyboard, resize_keyboard=True)
+    return reply_markup
 
 def check_init(bot, update):
     id = update.message.chat.id
@@ -119,6 +150,7 @@ def check_init(bot, update):
         return True
     else:
         return False
+
 
 crawling = CrawlingBot()
 
