@@ -70,7 +70,7 @@ import config
 
 
 MSG_HOW_TO = '명령어 /air'
-ar_admin = {688899662, 421152487}
+ar_admin = [421152487, 688899662]
 dic_loc = {}
 def proc_start(bot, update):
     id = update.message.chat.id
@@ -89,13 +89,6 @@ def proc_location(bot, update):
     str = crawling.run(dic_loc[id])
     bot.send_message(chat_id=id, text=str, reply_markup=reply_markup)
     bot.send_message(chat_id=id, text="다음에 또 불러주세요\n"+MSG_HOW_TO)
-
-def check_init(bot, update):
-    if len(dic_loc) == 0:
-        proc_start(bot, update)
-        return True
-    else:
-        return False
 
 def proc_air(bot, update):
     if check_init(bot, update):
@@ -116,6 +109,17 @@ def proc_message(bot, update):
         return
     update.message.reply_text(MSG_HOW_TO)
 
+def check_init(bot, update):
+    id = update.message.chat.id
+    if (id in dic_loc) == False:
+        if id == ar_admin[1] or id == ar_admin[0]:
+            dic_loc[id] = "126.922,37.383"
+            return False
+        proc_start(bot, update)
+        return True
+    else:
+        return False
+
 crawling = CrawlingBot()
 
 #init
@@ -124,7 +128,7 @@ updater = Updater(config.BOT_ACCESS_TOKEN)
 #add event
 updater.dispatcher.add_handler(CommandHandler('start', proc_start))
 updater.dispatcher.add_handler(CommandHandler('air', proc_air))
-updater.dispatcher.add_handler(CommandHandler('call', proc_call))
+updater.dispatcher.add_handler(CommandHandler('sendyuyu', proc_call))
 updater.dispatcher.add_handler(MessageHandler(Filters.text, proc_message))
 updater.dispatcher.add_handler(MessageHandler(Filters.location, proc_location))
 
