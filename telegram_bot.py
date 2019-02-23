@@ -15,10 +15,13 @@ def get_data(id):
     file.close()
     return _str
 
-def is_data(id):
+def exist_data(id):
     path = "data/" + str(id)
     return os.path.exists(path)
 
+def create_directory(directory_name):
+    if not os.path.isdir(directory_name):
+        os.makedirs(directory_name)
 
 # =========================
 # crawling
@@ -91,7 +94,7 @@ import config
 
 MSG_HOW_TO = '명령어 /air'
 ar_admin = [421152487, 688899662]
-dic_loc = {}
+
 def proc_start(bot, update):
     id = update.message.chat.id
     #bot.send_message(id, MSG_HOW_TO)
@@ -103,29 +106,32 @@ def proc_start(bot, update):
 def proc_location(bot, update):
     id = update.message.chat.id
     isNewUser = False
-    if (id in dic_loc) == False:
+    if exist_data(id) == False:
         isNewUser = True
 
-    dic_loc[id] = "{0:.3f},{1:.3f}".format(update.message.location.longitude, update.message.location.latitude)
-    _str = crawling.run(dic_loc[id])
+    loc = "{0:.3f},{1:.3f}".format(update.message.location.longitude, update.message.location.latitude)
+    set_data(id, loc)
+    _str = crawling.run(loc)
     bot.send_message(chat_id=id, text=_str, reply_markup=get_markup())
     bot.send_message(chat_id=id, text="다음에 또 불러주세요\n"+MSG_HOW_TO)
 
     if isNewUser == True:
-        print(dic_loc)
+        bot.send_message(chat_id=ar_admin[0], text="신규유저:{}".format(id))
 
 def proc_air(bot, update):
     if check_init(bot, update):
         return
     id = update.message.chat.id
-    _str = crawling.run(dic_loc[id])
+    loc = get_data(id)
+    _str = crawling.run(loc)
     bot.send_message(chat_id=id, text=_str, reply_markup=get_markup())
 
 def proc_call(bot, update):
     if check_init(bot, update):
         return
     id = update.message.chat.id
-    _str = crawling.run(dic_loc[id])
+    loc = get_data(id)
+    _str = crawling.run(loc)
     for id in ar_admin:
         bot.send_message(chat_id=id, text=_str, reply_markup=get_markup())
 
@@ -142,15 +148,14 @@ def get_markup():
 
 def check_init(bot, update):
     id = update.message.chat.id
-    if (id in dic_loc) == False:
-        if id == ar_admin[1] or id == ar_admin[0]:
-            dic_loc[id] = "126.922,37.383"
-            return False
+    if exist_data(id) == False:
         proc_start(bot, update)
         return True
     else:
         return False
 
+
+create_directory("data")
 
 crawling = CrawlingBot()
 
