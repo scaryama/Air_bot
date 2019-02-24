@@ -77,20 +77,30 @@ class CrawlingBot:
             self.driver.get(url)
             ar.append(self.get_value())
 
+        _emoji1 = self.emoji(ar[2], [40, 50, 75, 100, 150])
+        _emoji2 = self.emoji(ar[1], [20, 25, 37, 50, 75])
+        _emoji3 = self.emoji(ar[3], [5.5, 9, 12, 15, 32])
+
         self._str = "[미세먼지 정보]\n"
-        self._str += "이산화황 " + ar[3] + "\n"
-        self._str += "극초미세 " + ar[0] + "\n"
-        self._str += "초미세    " + ar[1] + "\n"
-        self._str += "미세먼지 " + ar[2] + "\n"
+        self._str += "초미세먼지 " + _emoji2 + " "  + ar[1] + "\n"
+        self._str += "미세먼지    " + _emoji1 + " " + ar[2] + "\n"
+        self._str += "아황산가스 " + _emoji3 + " "  + ar[3] + "\n"
+        #self._str += "😍😘😐☹😡☠"
 
         return self._str
+
+    def emoji(self, value, ar):
+        ar_emoji = ['😍','😘','😐','🙁','😡']
+        for i, v in enumerate(ar):
+            if float(value) <= v:
+                return ar_emoji[i]
+        return '☠'
 
 # =========================
 # telegram
 # =========================
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-import config
 
 
 MSG_HOW_TO = '명령어 /air'
@@ -156,6 +166,8 @@ def check_init(bot, update):
         return False
 
 
+
+import config
 
 #init
 create_directory("data")
